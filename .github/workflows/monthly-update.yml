@@ -1,0 +1,77 @@
+name: 每月美樂家價目表自動更新並發布
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Taipei = UTC+8; the 5th day of each month at 09:37 Taipei.
+    - cron: '37 1 5 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-deployment
+  cancel-in-progress: false
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Python runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install PDF reader
+        run: pip install -r requirements.txt
+
+      - name: Verify official PDF and update catalog when scheduled or manually launched
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        # If the official PDF cannot be parsed, keep the prior verified catalog
+        # and publish the visible failure report instead of breaking the site.
+        shell: bash
+        run: |
+          python scripts/update_catalog.py || echo '官方 PDF 驗證失敗，保留舊資料並公開檢查結果。'
+
+      - name: Save monthly check record to repository
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html catalog.json update-status.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore: record official monthly product catalog check'
+            git push origin HEAD:main
+          fi
+
+      - name: Enable GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare static website only
+        shell: bash
+        run: |
+          mkdir -p public
+          cp index.html update-status.json .nojekyll public/
+
+      - name: Upload prepared website
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+
+      - name: Publish website
+        id: deployment
+        uses: actions/deploy-pages@v4

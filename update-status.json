@@ -1,0 +1,15 @@
+{
+  "catalog_version": "2026-10",
+  "catalog_count": 303,
+  "last_checked_at": "",
+  "last_updated_at": "2026-10-21T00:00:00+08:00",
+  "result": "initial",
+  "message": "初始版本：已收錄 2026 年 10 月價目表；排程需在 GitHub 部署後才會啟用。",
+  "change_summary": {
+    "added": 0,
+    "removed": 0,
+    "price_changes": 0,
+    "point_changes": 0
+  },
+  "source_url": "https://cdnsc1.melaleuca.com/tw-hk/documents/help-center/tw/Pricelist-zhtw.pdf"
+}
